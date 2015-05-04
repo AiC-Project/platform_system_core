@@ -370,6 +370,8 @@ int fs_mgr_mount_all(struct fstab *fstab)
         }
 
         if (fstab->recs[i].fs_mgr_flags & MF_WAIT) {
+            INFO("Mounting filesystem at %s, will wait if not available\n",
+                 fstab->recs[i].mount_point);
             wait_for_file(fstab->recs[i].blk_device, WAIT_TIMEOUT);
         }
 
