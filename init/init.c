@@ -69,6 +69,8 @@ static int property_triggers_enabled = 0;
 static int   bootchart_count;
 #endif
 
+#define LOG_FULL_COMMANDS true
+
 static char console[32];
 static char bootmode[32];
 static char hardware[32];
@@ -528,6 +530,29 @@ static int is_last_command(struct action *act, struct command *cmd)
     return (list_tail(&act->commands) == &cmd->clist);
 }
 
+void log_command_result(struct command *cmd, int ret) {
+    int i;
+    size_t bufsize = 0;
+    char *buf;
+
+    for (i = 0; i < cmd->nargs; i++) {
+        bufsize += strlen(cmd->args[i]) + 1;
+    }
+
+    buf = malloc(bufsize);
+    buf[0] = '\0';
+    for (i = 0; i < cmd->nargs; i++) {
+        strncat(buf, cmd->args[i], strlen(cmd->args[i]));
+        if (i < cmd->nargs - 1) {
+            strncat(buf, " ", 1);
+        }
+    }
+
+    INFO("r=%d command '%s'\n", ret, (LOG_FULL_COMMANDS ? buf : cur_command->args[0]));
+
+    free(buf);
+}
+
 void execute_one_command(void)
 {
     int ret;
@@ -547,7 +572,7 @@ void execute_one_command(void)
         return;
 
     ret = cur_command->func(cur_command->nargs, cur_command->args);
-    INFO("command '%s' r=%d\n", cur_command->args[0], ret);
+    log_command_result(cur_command, ret);
 }
 
 static int wait_for_coldboot_done_action(int nargs, char **args)
