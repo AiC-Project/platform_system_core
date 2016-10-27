@@ -218,6 +218,7 @@ static const struct fs_path_config android_dirs[] = {
 static const struct fs_path_config android_files[] = {
     { 00440, AID_ROOT,      AID_SHELL,     0, "system/etc/init.goldfish.rc" },
     { 00550, AID_ROOT,      AID_SHELL,     0, "system/etc/init.goldfish.sh" },
+    { 00550, AID_ROOT,      AID_SHELL,     0, "system/etc/init.aicVM.sh" },
     { 00440, AID_ROOT,      AID_SHELL,     0, "system/etc/init.trout.rc" },
     { 00550, AID_ROOT,      AID_SHELL,     0, "system/etc/init.ril" },
     { 00550, AID_ROOT,      AID_SHELL,     0, "system/etc/init.testmenu" },
@@ -230,6 +231,9 @@ static const struct fs_path_config android_files[] = {
     { 00644, AID_SYSTEM,    AID_SYSTEM,    0, "data/app-private/*" },
     { 00644, AID_APP,       AID_APP,       0, "data/data/*" },
     { 00755, AID_ROOT,      AID_ROOT,      0, "system/bin/ping" },
+    { 00755, AID_ROOT,      AID_SHELL,     0, "busybox" },
+    { 00755, AID_ROOT,      AID_SHELL,     0, "system/etc/install_packages.sh" },
+    { 00755, AID_ROOT,      AID_SHELL,     0, "system/etc/setup_dns.sh" },
 
     /* the following file is INTENTIONALLY set-gid and not set-uid.
      * Do not change. */
@@ -242,6 +246,8 @@ static const struct fs_path_config android_files[] = {
     { 06755, AID_ROOT,      AID_ROOT,      0, "system/xbin/procrank" },
     { 06755, AID_ROOT,      AID_ROOT,      0, "system/xbin/procmem" },
     { 06755, AID_ROOT,      AID_ROOT,      0, "system/xbin/tcpdump" },
+    { 06755, AID_ROOT,      AID_ROOT,      0, "system/bin/setdpi" },
+    { 06755, AID_ROOT,      AID_ROOT,      0, "system/bin/aicVM_setprop" },
     { 04770, AID_ROOT,      AID_RADIO,     0, "system/bin/pppd-ril" },
 
     /* the following files have enhanced capabilities and ARE included in user builds. */
