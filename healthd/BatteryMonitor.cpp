@@ -31,6 +31,8 @@
 #include <utils/String8.h>
 #include <utils/Vector.h>
 
+#include <battery_sensor.h>
+
 #define POWER_SUPPLY_SUBSYSTEM "power_supply"
 #define POWER_SUPPLY_SYSFS_PATH "/sys/class/" POWER_SUPPLY_SUBSYSTEM
 
@@ -97,9 +99,14 @@ int BatteryMonitor::readFromFile(const String8& path, char* buf, size_t size) {
 
     if (path.isEmpty())
         return -1;
+
+    // If the file path is a fake one, override value completely
+    if (aic_use_fake_battery_value(path.string(), buf, size) > 0) {
+        return strlen(buf);
+    }
+
     int fd = open(path.string(), O_RDONLY, 0);
     if (fd == -1) {
-        KLOG_ERROR(LOG_TAG, "Could not open '%s'\n", path.string());
         return -1;
     }
 
@@ -113,6 +120,13 @@ int BatteryMonitor::readFromFile(const String8& path, char* buf, size_t size) {
         buf[0] = '\0';
 
     close(fd);
+
+    // Cache value and use real or overloaded one
+    int aic_result = aic_get_value_from_proc(path, buf, size);
+    if (aic_result != -1) {
+	return aic_result;
+    }
+
     return count;
 }
 
@@ -186,7 +200,17 @@ bool BatteryMonitor::update(void) {
     else
         props.batteryPresent = true;
 
-    props.batteryLevel = getIntField(mHealthdConfig->batteryCapacityPath);
+    if (mHealthdConfig->batteryCapacityPath.isEmpty()) {
+        int efull = getIntField(mHealthdConfig->batteryEnergyFullPath);
+        int enow = getIntField(mHealthdConfig->batteryEnergyNowPath);
+        if (efull)
+            props.batteryLevel = ((long long)enow)*100/efull;
+        else
+            props.batteryLevel = 0;
+    }
+    else {
+        props.batteryLevel = getIntField(mHealthdConfig->batteryCapacityPath);
+    }
     props.batteryVoltage = getIntField(mHealthdConfig->batteryVoltagePath) / 1000;
 
     if (!mHealthdConfig->batteryCurrentNowPath.isEmpty())
@@ -335,6 +359,22 @@ void BatteryMonitor::init(struct healthd_config *hc, bool nosvcmgr) {
                         mHealthdConfig->batteryCapacityPath = path;
                 }
 
+                if (mHealthdConfig->batteryEnergyNowPath.isEmpty()) {
+                    path.clear();
+                    path.appendFormat("%s/%s/energy_now", POWER_SUPPLY_SYSFS_PATH,
+                                      name);
+                    if (access(path, R_OK) == 0)
+                        mHealthdConfig->batteryEnergyNowPath = path;
+                }
+
+                if (mHealthdConfig->batteryEnergyFullPath.isEmpty()) {
+                    path.clear();
+                    path.appendFormat("%s/%s/energy_full", POWER_SUPPLY_SYSFS_PATH,
+                                      name);
+                    if (access(path, R_OK) == 0)
+                        mHealthdConfig->batteryEnergyFullPath = path;
+                }
+
                 if (mHealthdConfig->batteryVoltagePath.isEmpty()) {
                     path.clear();
                     path.appendFormat("%s/%s/voltage_now",
@@ -414,6 +454,22 @@ void BatteryMonitor::init(struct healthd_config *hc, bool nosvcmgr) {
         KLOG_WARNING(LOG_TAG, "BatteryTemperaturePath not found\n");
     if (mHealthdConfig->batteryTechnologyPath.isEmpty())
         KLOG_WARNING(LOG_TAG, "BatteryTechnologyPath not found\n");
+
+    // If battery is not present, we must override every usefull paths with fake
+    // ones to disable /sys/class/power_supply host values
+    if (mHealthdConfig->batteryPresentPath.isEmpty()) {
+        // Free every potential strduped values
+        mHealthdConfig->batteryStatusPath.clear();
+        mHealthdConfig->batteryEnergyNowPath.clear();
+        mHealthdConfig->batteryEnergyFullPath.clear();
+
+        ALOGI("overriding Battery service paths with fake ones");
+
+        mHealthdConfig->batteryPresentPath.appendFormat("%s/present", AIC_FAKE_POWER_SUPPLY);
+        mHealthdConfig->batteryStatusPath.appendFormat("%s/status", AIC_FAKE_POWER_SUPPLY);
+        mHealthdConfig->batteryEnergyNowPath.appendFormat("%s/energy_now", AIC_FAKE_POWER_SUPPLY);
+        mHealthdConfig->batteryEnergyFullPath.appendFormat("%s/energy_full", AIC_FAKE_POWER_SUPPLY);
+    }
 
     if (nosvcmgr == false) {
             mBatteryPropertiesRegistrar = new BatteryPropertiesRegistrar(this);

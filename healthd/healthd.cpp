@@ -50,6 +50,8 @@ static struct healthd_config healthd_config = {
     .batteryTechnologyPath = String8(String8::kEmptyString),
     .batteryCurrentNowPath = String8(String8::kEmptyString),
     .batteryChargeCounterPath = String8(String8::kEmptyString),
+    .batteryEnergyNowPath = String8(String8::kEmptyString),
+    .batteryEnergyFullPath = String8(String8::kEmptyString),
 };
 
 #define POWER_SUPPLY_SUBSYSTEM "power_supply"
@@ -236,7 +238,7 @@ static void healthd_mainloop(void) {
         int nevents;
 
         IPCThreadState::self()->flushCommands();
-        nevents = epoll_wait(epollfd, events, maxevents, awake_poll_interval);
+        nevents = epoll_wait(epollfd, events, maxevents, 1000); // 1 second
 
         if (nevents == -1) {
             if (errno == EINTR)
