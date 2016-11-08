@@ -52,6 +52,8 @@ static struct healthd_config healthd_config = {
     .batteryCurrentNowPath = String8(String8::kEmptyString),
     .batteryCurrentAvgPath = String8(String8::kEmptyString),
     .batteryChargeCounterPath = String8(String8::kEmptyString),
+    .batteryEnergyNowPath = String8(String8::kEmptyString),
+    .batteryEnergyFullPath = String8(String8::kEmptyString),
     .energyCounter = NULL,
     .screen_on = NULL,
 };
@@ -283,7 +285,7 @@ static void healthd_mainloop(void) {
         mode_timeout = healthd_mode_ops->preparetowait();
         if (timeout < 0 || (mode_timeout > 0 && mode_timeout < timeout))
             timeout = mode_timeout;
-        nevents = epoll_wait(epollfd, events, eventct, timeout);
+        nevents = epoll_wait(epollfd, events, eventct, 1000);
 
         if (nevents == -1) {
             if (errno == EINTR)
